@@ -1,3 +1,5 @@
+Commands used to build the python code. Requires Pybind11 installed and the path to it.
+
 --Windows--
 mkdir .\build\
 mkdir .\bindings\windows\
