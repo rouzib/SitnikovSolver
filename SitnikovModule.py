@@ -4,10 +4,10 @@ import numpy as np
 
 # Determine the platform-specific bindings for the Sitnikov problem
 if os.name == 'nt':
-    sys.path.append(os.path.abspath("bindings/windows"))
+    sys.path.append(os.path.abspath("SitnikovCpp/bindings/windows"))
     import PySitnikov
 elif os.name == 'posix':
-    sys.path.append(os.path.abspath("bindings/linux"))
+    sys.path.append(os.path.abspath("SitnikovCpp/bindings/linux"))
     import PySitnikov
 else:
     raise OSError("Unknown operating system")

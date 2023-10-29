@@ -1,3 +1,0 @@
-C:/Users/npayo/CLionProjects/SitnikovSolver/cmake-build-debug/CMakeFiles/SitnikovExe.dir
-C:/Users/npayo/CLionProjects/SitnikovSolver/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/Users/npayo/CLionProjects/SitnikovSolver/cmake-build-debug/CMakeFiles/rebuild_cache.dir
