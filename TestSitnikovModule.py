@@ -44,12 +44,14 @@ class TestSitnikovProblem:
         self.azCriteria = 1e-2
         self.sitnikovProblem = SitnikovModule.SitnikovProblem()
 
-    def runAndPlot(self, e, z0, vz0, tFin):
+    def runAndPlot(self, e, z0, vz0, tFin, valuesToShow=None):
         """
         Run the Sitnikov problem for given parameters and plot the results.
         """
-        self.plotAll(*self.sitnikovProblem.run(e, z0, vz0, tFin, "test.txt", "", returnTotal=True),
-                     valuesToShow=[0, 1, 2], parameters=[e, z0, vz0])
+        if valuesToShow is None:
+            valuesToShow = [0, 1, 2]
+        self.plotAll(*self.sitnikovProblem.run(e, z0, vz0, tFin, "test.txt", "", returnTotal=True), valuesToShow,
+                     parameters=[e, z0, vz0])
 
     def criteriaStable(self, t, z, vz):
         """
@@ -74,6 +76,7 @@ class TestSitnikovProblem:
         """
         Plot the results: z(t), vz(t), and its derivative.
         """
+
         def plotStableOrUnstable(t, z, vz):
             i = self.criteriaStable(t, z, vz)
             if i != -1:
@@ -121,7 +124,7 @@ if __name__ == '__main__':
 
     start_time = time.time()  # Start the timer
 
-    sitnikov.runAndPlot(e, z0, vz0, tFin)
+    sitnikov.runAndPlot(e, z0, vz0, tFin, [0])
 
     end_time = time.time()  # Stop the timer
     elapsed_time = end_time - start_time

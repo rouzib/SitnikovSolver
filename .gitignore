@@ -1,3 +1,4 @@
 .idea/
 *.iml
 SitnikovCpp/cmake-build-debug
+test.txt
