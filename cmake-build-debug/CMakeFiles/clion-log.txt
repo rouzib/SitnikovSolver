@@ -1,0 +1,8 @@
+"C:\Program Files\JetBrains\CLion 2021.3.2\bin\cmake\win\bin\cmake.exe" -DCMAKE_BUILD_TYPE=Debug "-DCMAKE_MAKE_PROGRAM=C:/Program Files/JetBrains/CLion 2021.3.2/bin/ninja/win/ninja.exe" -DBUILD_PYTHON_MODULE=OFF -G Ninja C:\Users\npayo\CLionProjects\SitnikovSolver
+-- pybind11::lto disabled (problems with undefined symbols for MinGW for now)
+-- pybind11::thin_lto disabled (problems with undefined symbols for MinGW for now)
+-- Found pybind11: C:/Users/npayo/AppData/Local/Programs/Python/Python311/Lib/site-packages/pybind11/include (found version "2.11.1")
+-- Building the standalone executable...
+-- Configuring done
+-- Generating done
+-- Build files have been written to: C:/Users/npayo/CLionProjects/SitnikovSolver/cmake-build-debug

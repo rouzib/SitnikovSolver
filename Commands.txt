@@ -1,0 +1,21 @@
+--Windows--
+mkdir .\build\
+mkdir .\bindings\windows\
+cd .\build\
+cmake ..
+cmake --build . --config Release
+cd ..
+move .\build\Release\*.* .\bindings\windows\
+rm build
+
+
+
+--Linux--
+mkdir build
+mkdir bindings/linux
+cd build
+cmake ..
+make
+cd ..
+mv build/PySitnikov.cpython-310-x86_64-linux-gnu.so bindings/linux/
+rm -r build
