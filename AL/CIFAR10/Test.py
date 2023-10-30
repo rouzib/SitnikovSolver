@@ -8,81 +8,101 @@ from torch.utils.data import Subset
 
 
 def imshow(img, title):
+    """
+    Display an image with a given title.
+
+    :param img: The image to display.
+    :param title: The title for the image.
+    """
     # Unnormalize the images for display
     img = img / 2 + 0.5
-    npimg = img.numpy()
-    plt.figure(figsize=(10, 10))  # Make the figure bigger
+    npImg = img.numpy()
+    plt.figure(figsize=(10, 10))
     plt.title(title)
-    plt.axis('off')  # Remove the axes
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    plt.axis('off')
+    plt.imshow(np.transpose(npImg, (1, 2, 0)))
     plt.show()
 
 
-def plot_images_from_loaders(train_loader, test_loader):
-    # Get a batch of training images and their labels
-    train_images, _ = next(iter(train_loader))
-    imshow(torchvision.utils.make_grid(train_images[:8]), "Training Images")  # Display 8 images with a title
+def plotImagesFromLoaders(trainLoader, testLoader):
+    """
+    Display a batch of training and test images.
 
-    # Get a batch of test images and their labels
-    test_images, _ = next(iter(test_loader))
-    imshow(torchvision.utils.make_grid(test_images[:8]), "Test Images")  # Display 8 images with a title
+    :param trainLoader: DataLoader for the training set.
+    :param testLoader: DataLoader for the test set.
+    """
+    # Display training images
+    trainImages, _ = next(iter(trainLoader))
+    imshow(torchvision.utils.make_grid(trainImages[:8]), "Training Images")
+
+    # Display test images
+    testImages, _ = next(iter(testLoader))
+    imshow(torchvision.utils.make_grid(testImages[:8]), "Test Images")
 
 
-# Check if GPU is available
+# Check for GPU availability
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-# Transformations for the training and testing data
-transform_train = transforms.Compose([
+# Define data transformations for training and testing datasets
+transformTrain = transforms.Compose([
     transforms.RandomCrop(32, padding=4),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 
-transform_test = transforms.Compose([
+transformTest = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 
-# Define the classes you want
-wanted_classes = ['airplane', 'automobile']
-class_indices = [0, 1]  # Corresponding indices for 'airplane' and 'automobile'
+# Define classes of interest
+wantedClasses = ['airplane', 'automobile']
+classIndices = [0, 1]  # Indices corresponding to desired classes
+n = 100  # Desired number of images per class
 
-n = 100  # Number of images you want for each class
+# Load CIFAR-10 dataset
+trainDatasetFull = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transformTrain)
+testDatasetFull = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transformTest)
 
-# Load the CIFAR-10 dataset
-train_dataset_full = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
-test_dataset_full = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_test)
+# Filter datasets to retain only images of desired classes
+trainIndices = [i for i, (_, label) in enumerate(trainDatasetFull) if label in classIndices]
+testIndices = [i for i, (_, label) in enumerate(testDatasetFull) if label in classIndices]
 
-# Filter the datasets to retain only n images from the specified classes
-train_indices = [i for i, (_, label) in enumerate(train_dataset_full) if label in class_indices]
-test_indices = [i for i, (_, label) in enumerate(test_dataset_full) if label in class_indices]
+# Select a subset of the data
+trainIndices = trainIndices[:2 * n]
 
-# Now, select only n images from each class for training and testing datasets
-train_indices = train_indices[:2 * n]
+trainDataset = Subset(trainDatasetFull, trainIndices)
+testDataset = Subset(testDatasetFull, testIndices)
 
-train_dataset = Subset(train_dataset_full, train_indices)
-test_dataset = Subset(test_dataset_full, test_indices)
+# Create data loaders
+trainLoader = torch.utils.data.DataLoader(trainDataset, batch_size=128, shuffle=True, num_workers=0)
+testLoader = torch.utils.data.DataLoader(testDataset, batch_size=100, shuffle=False, num_workers=0)
 
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=0)
-test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=100, shuffle=False, num_workers=0)
+print(f"Size of the training dataset: {len(trainDataset)}")
+print(f"Size of the test dataset: {len(testDataset)}")
 
-print(f"Size of the training dataset: {len(train_dataset)}")
-print(f"Size of the test dataset: {len(test_dataset)}")
-
-
-# To use the function:
-# plot_images_from_loaders(train_loader, test_loader)
 
 class SimpleCNN(nn.Module):
+    """
+    A simple CNN model for image classification.
+    """
+
     def __init__(self):
         super(SimpleCNN, self).__init__()
+        # Define layers
         self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
         self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
         self.fc1 = nn.Linear(64 * 8 * 8, 512)
         self.fc2 = nn.Linear(512, 10)
 
     def forward(self, x):
+        """
+        Forward pass through the model.
+
+        :param x: Input tensor.
+        :return: Model's output tensor.
+        """
         x = nn.ReLU()(self.conv1(x))
         x = nn.MaxPool2d(2)(x)
         x = nn.ReLU()(self.conv2(x))
@@ -96,15 +116,16 @@ class SimpleCNN(nn.Module):
 model = SimpleCNN().to(device)
 print("Loaded model")
 
+# Define loss criterion and optimizer
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
 # Training loop
 for epoch in range(10):
     model.train()
-    total_loss = 0.0
-    for i, (inputs, labels) in enumerate(train_loader, 0):
-        inputs, labels = inputs.to(device), labels.to(device)  # Move the data to GPU
+    totalLoss = 0.0
+    for i, (inputs, labels) in enumerate(trainLoader, 0):
+        inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad()
 
         outputs = model(inputs)
@@ -112,18 +133,24 @@ for epoch in range(10):
         loss.backward()
         optimizer.step()
 
-        total_loss += loss.item()
+        totalLoss += loss.item()
+    print(f"Epoch {epoch + 1}, Loss: {totalLoss / len(trainLoader)}")
 
-    print(f"Epoch {epoch + 1}, Loss: {total_loss / len(train_loader)}")
 
+def evaluate(model, testLoader):
+    """
+    Evaluate model's accuracy on a test dataset.
 
-def evaluate(model, test_loader):
+    :param model: The model to evaluate.
+    :param testLoader: DataLoader for the test dataset.
+    :return: Accuracy of the model on the test data.
+    """
     model.eval()
     correct = 0
     total = 0
     with torch.no_grad():
-        for images, labels in test_loader:
-            images, labels = images.to(device), labels.to(device)  # Move the data to GPU
+        for images, labels in testLoader:
+            images, labels = images.to(device), labels.to(device)
             outputs = model(images)
             _, predicted = outputs.max(1)
             total += labels.size(0)
@@ -133,5 +160,5 @@ def evaluate(model, test_loader):
     return accuracy
 
 
-accuracy = evaluate(model, test_loader)
+accuracy = evaluate(model, testLoader)
 print(f"Accuracy on test data: {accuracy:.2f}%")
