@@ -10,14 +10,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data
-from torchsummary import summary
 from pathlib import Path
 from tqdm import tqdm
 import os
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from SelectSims import inInterestZone
-import SitnikovModels
-from SitnikovCpp import SitnikovProblem, _readResults
+from Utils.SelectSims import inInterestZone
+import Utils.SitnikovModels as SitnikovModels
+
+from SitnikovModule import SitnikovProblem
+
 import torch.multiprocessing as mp
 
 mpl.rcParams.update(mpl.rcParamsDefault)
@@ -48,12 +49,12 @@ def dist(X, Y):
     return torch.min(torch.cdist(X.to(device), Y.to(device)), dim=1)[0]
 
 
-def u(X, mod, subDiv=1024):
+def u(X, mod, subDiv=8192):
     with torch.no_grad():
         res = torch.empty(0, device=device)
         for i in range(len(X) // subDiv + 1):
             end = min(len(X), (i + 1) * subDiv)
-            pred: torch.Tensor = 2 * torch.abs(0.5 - mod(X[i * subDiv:end].to(device))[:, 0])
+            pred: torch.Tensor = 2 * torch.abs(0.5 - mod(X[i * subDiv:end])[:, 0])
             res = torch.concat((res, pred))
         return res
 
@@ -69,7 +70,7 @@ def score(X, Y, mod, scalar=1.0, uncertainty=None):
 
 
 def query(n, X, Y, mod, scalar=1.0):
-    toLabel = torch.empty((0, 3))
+    toLabel = torch.empty((0, 3), device=device)
     uncertainty = u(X[:, 1:3], mod)
 
     for _ in range(n):
@@ -77,7 +78,7 @@ def query(n, X, Y, mod, scalar=1.0):
         idx = torch.argmin(xScore)
         chosenValue = X[idx][None, :]
         toLabel = torch.concat((toLabel, chosenValue))
-        Y = torch.concat((Y, torch.concat((chosenValue, torch.ones((1, 2))), 1)))
+        Y = torch.concat((Y, torch.concat((chosenValue.to("cpu"), torch.ones((1, 2))), 1)))
         X = torch.cat((X[:idx], X[idx + 1:]))
         uncertainty = torch.cat((uncertainty[:idx], uncertainty[idx + 1:]))
 
@@ -92,14 +93,15 @@ def queryToDataSet(n, X, dataSet, mod, scalar=1.0):
 
 def oracleGetValue(candidate):
     def getFileName(x):
-        return f"/mnt/f/Simulations/e={x[0]}_z0={x[1]}_vz0={x[2]}.txt"
+        return f"..\\Simulations\\e={x[0]}_z0={x[1]}_vz0={x[2]}.txt"
+        # return f"/mnt/f/Simulations/e={x[0]}_z0={x[1]}_vz0={x[2]}.txt"
 
     i = 0
     if os.path.isfile(getFileName(candidate)):
-        value = torch.tensor(simulator.getInitialConditionsFromFile(getFileName(candidate), *candidate))
+        value = torch.tensor(simulator.processFile(getFileName(candidate), *candidate))
         i = 1
     else:
-        value = torch.tensor(simulator.runInitialConditions(*candidate))
+        value = torch.tensor(simulator.runForAL(*candidate, tFin=100, path="..\\Simulations"))
     return value, i
 
 
@@ -135,7 +137,7 @@ def train(seed=0, lr=1e-3, batchSize=8, epochMax=200, startingTrainingSize=25, g
           generatingAfterEpoch=25, modelName="SitnikovNN", c=0.01):
     generatingTotal = generatingEpoch - generatingAfterEpoch
 
-    file = "data.npy"
+    file = "Utils/data.npy"
     e = 0.5
     load = True
     if not load:
@@ -170,19 +172,22 @@ def train(seed=0, lr=1e-3, batchSize=8, epochMax=200, startingTrainingSize=25, g
 
     np.random.seed(1)
 
-    fileName = f"randomSimulations{400_000}.npy"
+    size = 400_000
+    fileName = f"randomSimulations{size}.npy"
     if os.path.exists(fileName):
         print(f"File: {fileName} exists")
         randomSamples = np.load(fileName)
     else:
-        randomSamples = np.random.uniform([0.5, -1., 0.], [0.5, 1., 3.], (400_000, 3))
+        randomSamples = np.random.uniform([0.5, -1., 0.], [0.5, 1., 3.], (size, 3))
         randomSamples = normalizeData(randomSamples)
         np.save(fileName, randomSamples)
     randomSamplesInZone = randomSamples[inInterestZone(randomSamples[:, 1], randomSamples[:, 2])]
     print(f"Sampled data points: {len(randomSamples)}, Sampled data points of interest: {len(randomSamplesInZone)}")
     randomSamples = torch.from_numpy(randomSamplesInZone).to(dtype=torch.float32)
-    randomSamples = torch.concat((randomSamples, totData[:, 0:3]))
+    # randomSamples = torch.concat((randomSamples, totData[:, 0:3])) # if the already simulated data is wanted
     print(f"Final size of the possible dataset: {len(randomSamples)}")
+
+    randomSamples = randomSamples.to(device)
 
     # --- Initialize model
     model = SitnikovModels.models[modelName]()

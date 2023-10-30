@@ -10,13 +10,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data
-from torchsummary import summary
 from pathlib import Path
 from tqdm import tqdm
 import os
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from SelectSims import inInterestZone
-import SitnikovModels
+from Utils.SelectSims import inInterestZone
+import Utils.SitnikovModels as SitnikovModels
 
 mpl.rcParams.update(mpl.rcParamsDefault)
 plt.rcParams['text.usetex'] = True
@@ -94,7 +93,7 @@ def train(seed=0, lr=1e-3, batchSize=8, epochMax=200, startingTrainingSize=25, g
           generatingAfterEpoch=25, modelName="sitnikovNN", c=0.01):
     generatingTotal = generatingEpoch - generatingAfterEpoch
 
-    file = "data.npy"
+    file = "Utils/data.npy"
     e = 0.5
     load = True
     if not load:

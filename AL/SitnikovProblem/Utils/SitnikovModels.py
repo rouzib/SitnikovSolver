@@ -18,7 +18,7 @@ class SitnikovNN(nn.Module):
         val = F.relu(self.fc1(val))
         val = F.relu(self.fc2(val))
         val = F.relu(self.fc3(val))
-        val = F.sigmoid(self.fc4(val))
+        val = torch.sigmoid(self.fc4(val))
         return val
 
 
@@ -43,7 +43,7 @@ class SitnikovNN7Layers(nn.Module):
         val = F.relu(self.fc4(val))
         val = F.relu(self.fc5(val))
         val = F.relu(self.fc6(val))
-        val = F.sigmoid(self.fc7(val))
+        val = torch.sigmoid(self.fc7(val))
         return val
 
 

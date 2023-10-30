@@ -2,3 +2,9 @@
 *.iml
 SitnikovCpp/cmake-build-debug
 test.txt
+Al/SitnikovProblem/Models/*.pt
+Al/SitnikovProblem/Datasets/*.pt
+Al/SitnikovProblem/Results/Plots/*.png
+Al/SitnikovProblem/Results/Training/*.png
+AL/Simulations/*.txt
+AL/SitnikovProblem/*.npy

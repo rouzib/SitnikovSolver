@@ -10,13 +10,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data
-from torchsummary import summary
 from pathlib import Path
 from tqdm import tqdm
 import os
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from SelectSims import inInterestZone
-import SitnikovModels
+from Utils.SelectSims import inInterestZone
+import Utils.SitnikovModels as SitnikovModels
+from SitnikovNN_Al_WithSimulations import normalizeData
 
 mpl.rcParams.update(mpl.rcParamsDefault)
 plt.rcParams['text.usetex'] = True
@@ -35,10 +35,10 @@ def getDataFromDataSet(dataSet):
 
 
 def train(seed=0, lr=1e-3, batchSize=8, epochMax=200, startingTrainingSize=25, generateAmount=4, generatingEpoch=75,
-          generatingAfterEpoch=25, modelName="SitnikovNN", c=1):
+          generatingAfterEpoch=25, modelName="SitnikovNN", fromDataset=""):
     generatingTotal = generatingEpoch - generatingAfterEpoch
 
-    file = "data.npy"
+    file = "Utils/data.npy"
     e = 0.5
     load = True
     if not load:
@@ -58,14 +58,18 @@ def train(seed=0, lr=1e-3, batchSize=8, epochMax=200, startingTrainingSize=25, g
     torch.manual_seed(seed)
     totData = totData[torch.randperm(totData.size(0))]
 
+    totData = normalizeData(totData)
+
     # --- Make dataSets
     sizeTraining = startingTrainingSize + generatingTotal * generateAmount
     sizeVal = 2000
     valDataSet = torch.utils.data.TensorDataset(totData[:sizeVal, :], totData[:sizeVal, 3])
-    totData = torch.load(f"Datasets/AL_model={modelName}_seed={seed}_train="
-                         f"{startingTrainingSize + generatingTotal * generateAmount}"
-                         f"_lr={lr}_batchSize={batchSize}_c={c}_withSimulations.pt")
-    dataSet = torch.utils.data.TensorDataset(totData[:, :], totData[:, 3])
+    totData = totData[sizeVal:]
+    if fromDataset == "":
+        dataSet = torch.utils.data.TensorDataset(totData[:sizeTraining, :], totData[:sizeTraining, 3])
+    else:
+        temp = torch.load(fromDataset)
+        dataSet = torch.utils.data.TensorDataset(temp[:sizeTraining, :], temp[:sizeTraining, 3])
 
     print(f"Validation dataset: {len(valDataSet)}, Training dataset: {len(dataSet)}, Remaining simulations: "
           f"{len(totData) - len(dataSet)}")
@@ -130,15 +134,15 @@ def train(seed=0, lr=1e-3, batchSize=8, epochMax=200, startingTrainingSize=25, g
                 if totalValLoss < minEvalLoss:
                     minEvalLoss = totalValLoss
                     savedEpoch = epoch
-                    torch.save(model.state_dict(), f"Models/BestNoAL_withDataset_model={modelName}_seed={seed}_train="
+                    torch.save(model.state_dict(), f"Models/BestNoAL_model={modelName}_seed={seed}_train="
                                                    f"{startingTrainingSize + generatingTotal * generateAmount}"
-                                                   f"_lr={lr}_batchSize={batchSize}_c={c}.pt")
+                                                   f"_lr={lr}_batchSize={batchSize}{'_fromAlDataset' if fromDataset != '' else ''}.pt")
 
             pbar.set_postfix(loss=totalLoss, evalLoss=totalValLoss, accuracy=accuracy)
 
-        torch.save(model.state_dict(), f"Models/NoAL_withDataset_model={modelName}_seed={seed}_train="
+        torch.save(model.state_dict(), f"Models/NoAL_model={modelName}_seed={seed}_train="
                                        f"{startingTrainingSize + generatingTotal * generateAmount}"
-                                       f"_lr={lr}_batchSize={batchSize}_c={c}.pt")
+                                       f"_lr={lr}_batchSize={batchSize}{'_fromAlDataset' if fromDataset != '' else ''}.pt")
 
     if useGPU:
         losses = torch.tensor(totLosses).cpu().numpy()
@@ -157,29 +161,18 @@ def train(seed=0, lr=1e-3, batchSize=8, epochMax=200, startingTrainingSize=25, g
     plt.legend()
     plt.savefig(
         f"Results/Training/NoAlLoss_model={modelName}_seed={seed}_train={startingTrainingSize + generatingTotal * generateAmount}"
-        f"_lr={lr}_batchSize={batchSize}.png")
+        f"_lr={lr}_batchSize={batchSize}{'_fromAlDataset' if fromDataset != '' else ''}.png")
     plt.show()
 
     print(f"Validation dataset: {len(valDataSet)}, Training dataset: {len(dataSet)}, Remaining simulations: "
           f"{len(totData) - len(dataSet)}")
 
-    torch.save(getDataFromDataSet(dataSet), f"Datasets/NoAL_withDataset_model={modelName}_seed={seed}_train="
-                                            f"{startingTrainingSize + generatingTotal * generateAmount}"
-                                            f"_lr={lr}_batchSize={batchSize}_c={c}.pt")
+    if fromDataset == "":
+        torch.save(getDataFromDataSet(dataSet), f"Datasets/NoAL_model={modelName}_seed={seed}_train="
+                                                f"{startingTrainingSize + generatingTotal * generateAmount}"
+                                                f"_lr={lr}_batchSize={batchSize}.pt")
 
 
 if __name__ == '__main__':
-    lr = 1e-3
-    batchSize = 8
-    epochMax = 600
-    startingTrainingSize = 1000
-    generateAmount = 20
-    generatingEpoch = 225
-    generatingAfterEpoch = 25
-    generatingTotal = generatingEpoch - generatingAfterEpoch
-    modelName = "7Layers"
-    c = 1e-3
-
-    train(seed=1, lr=lr, batchSize=batchSize, epochMax=epochMax, startingTrainingSize=startingTrainingSize,
-          generateAmount=generateAmount, generatingEpoch=generatingEpoch,
-          generatingAfterEpoch=generatingAfterEpoch, modelName=modelName, c=c)
+    train(seed=0, lr=1e-3, batchSize=64, epochMax=1000, startingTrainingSize=-1, generateAmount=0, generatingEpoch=75,
+          generatingAfterEpoch=25, modelName="7Layers")
