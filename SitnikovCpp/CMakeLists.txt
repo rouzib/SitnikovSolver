@@ -3,7 +3,7 @@ project(SitnikovSolver)
 
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    set(pybind11Path "C:/Users/npayo/AppData/Local/Programs/Python/Python311/Lib/site-packages/pybind11/share/cmake/pybind11")
+    set(pybind11Path "C:/Users/rouzib/AppData/Local/Programs/Python/Python310/Lib/site-packages/pybind11/share/cmake/pybind11")
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     set(pybind11Path "/home/rouzib/.local/lib/python3.10/site-packages/pybind11/share/cmake/pybind11")
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Release)
