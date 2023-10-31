@@ -1,4 +1,5 @@
 import sys
+import time
 from functools import partial
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -96,28 +97,50 @@ def oracleGetValue(candidate):
         return f"..\\Simulations\\e={x[0]}_z0={x[1]}_vz0={x[2]}.txt"
         # return f"/mnt/f/Simulations/e={x[0]}_z0={x[1]}_vz0={x[2]}.txt"
 
+    # start_time = time.time()  # code takes ~0.01 seconds
+
     i = 0
     if os.path.isfile(getFileName(candidate)):
         value = torch.tensor(simulator.processFile(getFileName(candidate), *candidate))
         i = 1
     else:
         value = torch.tensor(simulator.runForAL(*candidate, tFin=100, path="..\\Simulations"))
+
+    # end_time = time.time()
+    # elapsed_time = end_time - start_time
+    # print(f"Elapsed time: {elapsed_time:.4f} seconds")
+
     return value, i
 
 
-def oracle(X):
+def oracle(X, multithreading=False):
     X = reverseNormalization(X)
     existingSims = 0
     values = torch.empty((0, 5))
-    p = mp.Pool()
-    for value in p.imap_unordered(oracleGetValue, X):
-        existingSims += value[1]
-        value = value[0]
-        values = torch.concat((values, value[None, :]))
+
+    if multithreading:
+        # bug here: takes ~13 seconds for 2 samples while the code in each thread takes ~0.01 seconds to complete
+        start_time = time.time()
+        p = mp.Pool()
+        for value in p.imap_unordered(oracleGetValue, X):
+            existingSims += value[1]
+            value = value[0]
+            values = torch.concat((values, value[None, :]))
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time: {elapsed_time:.4f} seconds")
+    else:
+        for x in X:
+            value = oracleGetValue(x)
+            existingSims += value[1]
+            value = value[0]
+            values = torch.concat((values, value[None, :]))
 
     print(f"Existing sims: {existingSims}/{len(X)}")
 
     values = normalizeData(values)
+
     return values[:, 3], values[:, :], values[:, 4]
 
 

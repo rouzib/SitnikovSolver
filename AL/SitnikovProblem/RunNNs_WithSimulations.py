@@ -52,7 +52,7 @@ if __name__ == '__main__':
                                               f"{startingTrainingSize + generatingTotal * generateAmount}"
                                               f"_lr={lr}_batchSize={batchSize}_c={c}_withSimulations.pt")
 
-        file = "data.npy"
+        file = "Utils/data.npy"
         load = True
         if not load:
             data = []
